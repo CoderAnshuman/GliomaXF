@@ -55,8 +55,8 @@ export const AnalysisScreen: React.FC = () => {
       } else {
         setError('Analysis failed. Please try again with a clearer image.');
       }
-    } catch (err) {
-      setError('Connection error. Please check your API key and network.');
+    } catch (err: any) {
+      setError(err.message || 'Connection error. Please check your API key and network.');
     } finally {
       setIsAnalyzing(false);
     }
