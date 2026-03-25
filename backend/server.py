@@ -127,7 +127,7 @@ SUGGESTED_STEPS = {
 
 # ── Validation thresholds ─────────────────────────────────────────────────────
 #   Raise CLIP_MRI_THRESHOLD if too many non-MRI images slip through.
-#   Lower GRAYSCALE_SAT_THRESHOLD if real MRIs are being rejected.
+#   Lower GRAYSCALE_SAT_THRESHOLD if real MRIs are being rejected. 
 
 GRAYSCALE_SAT_THRESHOLD     = 0.15     # Layer 1: max mean colour saturation
 GRAYSCALE_STD_THRESHOLD     = 0.08     # Layer 1: min pixel intensity std (rejects blank images)
