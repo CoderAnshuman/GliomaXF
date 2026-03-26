@@ -49,10 +49,6 @@ try:
 except ImportError:
     _pip("Pillow")
 
-try:
-    import matplotlib
-except ImportError:
-    _pip("matplotlib")
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  STEP 1 — Imports (all guaranteed installed now)
@@ -70,9 +66,6 @@ import timm
 import clip
 from PIL import Image
 from torchvision import transforms
-import matplotlib
-matplotlib.use("Agg")                   # headless — no display needed
-import matplotlib.pyplot as plt
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -405,28 +398,7 @@ def _layer3_confidence(conf: float):
 #  Inference
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _b64_png(arr_hw3: np.ndarray, cmap: str | None = None) -> str:
-    """Encode a numpy array (H,W,3) or (H,W) as a base64 PNG string."""
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
-    ax.axis("off")
-    ax.imshow(np.clip(arr_hw3, 0, 1) if cmap is None else arr_hw3, cmap=cmap)
-    plt.tight_layout(pad=0)
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-    plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode()
 
-
-def _overlay_b64(base: np.ndarray, mask: np.ndarray, cmap: str, alpha: float) -> str:
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
-    ax.axis("off")
-    ax.imshow(np.clip(base, 0, 1))
-    ax.imshow(mask, cmap=cmap, alpha=alpha)
-    plt.tight_layout(pad=0)
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-    plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode()
 
 
 def _run_inference(img: Image.Image) -> dict:
