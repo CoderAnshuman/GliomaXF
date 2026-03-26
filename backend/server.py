@@ -14,10 +14,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #  STEP 0 — Auto-install missing packages (runs only when needed)
 # ─────────────────────────────────────────────────────────────────────────────
-import subprocess, sys
-
-def _pip(*pkgs):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", *pkgs])
 
 try:
     import torch
@@ -76,8 +72,13 @@ from pydantic import BaseModel
 # ─────────────────────────────────────────────────────────────────────────────
 
 MODEL_PATH  = "./best_model.pth"        # ← put your .pth file here
-HOST        = "0.0.0.0"
-PORT        = 8000
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    
+import os
+PORT = int(os.environ.get("PORT", 8000))
 
 # If True, requests from any origin are accepted (fine for local dev).
 # Set to your React dev URL (e.g. "http://localhost:5173") for tighter security.
