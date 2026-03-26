@@ -19,31 +19,31 @@ try:
     import torch
 except ImportError:
     print("[setup] Installing PyTorch...")
-    _pip("torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu121")
+   
 
 try:
     import timm
 except ImportError:
     print("[setup] Installing timm...")
-    _pip("timm")
+
 
 try:
     import clip
 except ImportError:
     print("[setup] Installing CLIP...")
-    _pip("git+https://github.com/openai/CLIP.git")
+   
 
 try:
     import fastapi
 except ImportError:
     print("[setup] Installing FastAPI + uvicorn...")
-    _pip("fastapi", "uvicorn[standard]", "python-multipart")
+    
 
 # remaining stdlib-adjacent deps
 try:
     import PIL
 except ImportError:
-    _pip("Pillow")
+  
 
 
 # ─────────────────────────────────────────────────────────────────────────────
