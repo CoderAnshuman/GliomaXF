@@ -428,7 +428,7 @@ Render will:
 ## 📁 Project Structure
 
 ```
-brainscan-ai/
+GliomaX/
 ├── main.py              ← FastAPI backend (entire API in one file)
 ├── requirements.txt     ← Python dependencies
 ├── render.yaml          ← Render Blueprint config
