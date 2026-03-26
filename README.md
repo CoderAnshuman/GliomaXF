@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 BrainScan AI
+# 🧠 GliomaX
 
 ### Hybrid CNN + Vision Transformer for Brain Tumor Detection & Classification
 
