@@ -14,45 +14,37 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #  STEP 0 — Auto-install missing packages (runs only when needed)
 # ─────────────────────────────────────────────────────────────────────────────
-import subprocess, sys
-
-def _pip(*pkgs):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", *pkgs])
 
 try:
     import torch
 except ImportError:
     print("[setup] Installing PyTorch...")
-    _pip("torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu121")
+   
 
 try:
     import timm
 except ImportError:
     print("[setup] Installing timm...")
-    _pip("timm")
+
 
 try:
     import clip
 except ImportError:
     print("[setup] Installing CLIP...")
-    _pip("git+https://github.com/openai/CLIP.git")
+   
 
 try:
     import fastapi
 except ImportError:
     print("[setup] Installing FastAPI + uvicorn...")
-    _pip("fastapi", "uvicorn[standard]", "python-multipart")
+    
 
 # remaining stdlib-adjacent deps
 try:
     import PIL
 except ImportError:
-    _pip("Pillow")
+  
 
-try:
-    import matplotlib
-except ImportError:
-    _pip("matplotlib")
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  STEP 1 — Imports (all guaranteed installed now)
@@ -70,9 +62,6 @@ import timm
 import clip
 from PIL import Image
 from torchvision import transforms
-import matplotlib
-matplotlib.use("Agg")                   # headless — no display needed
-import matplotlib.pyplot as plt
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -83,8 +72,13 @@ from pydantic import BaseModel
 # ─────────────────────────────────────────────────────────────────────────────
 
 MODEL_PATH  = "./best_model.pth"        # ← put your .pth file here
-HOST        = "0.0.0.0"
-PORT        = 8000
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    
+import os
+PORT = int(os.environ.get("PORT", 8000))
 
 # If True, requests from any origin are accepted (fine for local dev).
 # Set to your React dev URL (e.g. "http://localhost:5173") for tighter security.
@@ -405,28 +399,7 @@ def _layer3_confidence(conf: float):
 #  Inference
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _b64_png(arr_hw3: np.ndarray, cmap: str | None = None) -> str:
-    """Encode a numpy array (H,W,3) or (H,W) as a base64 PNG string."""
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
-    ax.axis("off")
-    ax.imshow(np.clip(arr_hw3, 0, 1) if cmap is None else arr_hw3, cmap=cmap)
-    plt.tight_layout(pad=0)
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-    plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode()
 
-
-def _overlay_b64(base: np.ndarray, mask: np.ndarray, cmap: str, alpha: float) -> str:
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
-    ax.axis("off")
-    ax.imshow(np.clip(base, 0, 1))
-    ax.imshow(mask, cmap=cmap, alpha=alpha)
-    plt.tight_layout(pad=0)
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-    plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode()
 
 
 def _run_inference(img: Image.Image) -> dict:

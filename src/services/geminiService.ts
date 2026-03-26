@@ -77,6 +77,7 @@ export async function findNearbyResearchCenters(lat: number, lng: number) {
   }
 }
 
+const API_URL = "https://steamily-soulful-zoie.ngrok-free.dev/";
 // src/services/modelService.ts
 export async function analyzeWithCustomModel(file: File) {
   const formData = new FormData();
@@ -85,7 +86,7 @@ export async function analyzeWithCustomModel(file: File) {
   try {
     console.log('📤 Sending file to backend:', file.name, file.type, file.size);
     
-    const response = await fetch('http://localhost:8000/predict', {
+    const response = await await fetch(`${API_URL}/predict`, {
       method: 'POST',
       body: formData,
     });
