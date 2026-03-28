@@ -77,7 +77,7 @@ export async function findNearbyResearchCenters(lat: number, lng: number) {
   }
 }
 
-const API_URL = "https://steamily-soulful-zoie.ngrok-free.dev";
+const API_URL = "https://anshumanshukla-gliomax-docker.hf.space";
 // src/services/modelService.ts
 export async function analyzeWithCustomModel(file: File) {
   const formData = new FormData();
