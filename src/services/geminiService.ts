@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 const getAI = () => {
-  const apiKey = process.env.GEMINI_API_KEY || "";
+  const apiKey = process.env.GEMINI_API_KEY || "fu";
   if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
     throw new Error("API Key Missing: Please set GEMINI_API_KEY in your .env file or AI Studio secrets.");
   }
