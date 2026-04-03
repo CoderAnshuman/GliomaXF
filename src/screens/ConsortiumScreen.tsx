@@ -6,7 +6,7 @@ const researchers = [
   {
     name: "Anshuman Shukla",
     institution: "Parul University",
-    role: "ML/AI Engineer",
+    role: "AI/ML Engineer",
     icon: <Brain size={24} />,
     image: "./anshumanImg.jpeg",
     github: "https://github.com/CoderAnshuman",
@@ -17,7 +17,7 @@ const researchers = [
     role: "UI/UX Developer",
     icon: <Layout size={24} />,
     image: "./foramImg.jpeg",
-    github: "https://github.com/foramthakkar",
+    github: "https://github.com/bhumi1608",
   },
   {
     name: "Tirth Patel",
@@ -25,7 +25,7 @@ const researchers = [
     role: "Backend Developer",
     icon: <Server size={24} />,
     image: "./tirthImg.jpeg",
-    github: "https://github.com/tirthpatel",
+    github: "https://github.com/tirthptl05",
   },
   {
     name: "Daksh Patel",
@@ -33,7 +33,7 @@ const researchers = [
     role: "Frontend Engineer",
     icon: <Code2 size={24} />,
     image: "./dakshImg.jpeg",
-    github: "https://github.com/dakshpatel",
+    github: "https://github.com/dakshpatel06",
   },
 ];
 
