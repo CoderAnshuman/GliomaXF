@@ -8,7 +8,7 @@ const researchers = [
     institution: "Parul University",
     role: "ML/AI Engineer",
     icon: <Brain size={24} />,
-    image: "src\\assets\\anshumanImg.jpeg",
+    image: "./anshumanImg.jpeg",
     github: "https://github.com/CoderAnshuman",
   },
   {
@@ -16,7 +16,7 @@ const researchers = [
     institution: "Parul University",
     role: "UI/UX Developer",
     icon: <Layout size={24} />,
-    image: "src\\assets\\foramImg.jpeg",
+    image: "./foramImg.jpeg",
     github: "https://github.com/foramthakkar",
   },
   {
@@ -24,7 +24,7 @@ const researchers = [
     institution: "Parul University",
     role: "Backend Developer",
     icon: <Server size={24} />,
-    image: "src\\assets\\tirthImg.jpeg",
+    image: "./tirthImg.jpeg",
     github: "https://github.com/tirthpatel",
   },
   {
@@ -32,7 +32,7 @@ const researchers = [
     institution: "Parul University",
     role: "Frontend Engineer",
     icon: <Code2 size={24} />,
-    image: "src\\assets\\dakshImg.jpeg",
+    image: "./dakshImg.jpeg",
     github: "https://github.com/dakshpatel",
   },
 ];
