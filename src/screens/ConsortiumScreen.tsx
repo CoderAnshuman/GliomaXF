@@ -1,31 +1,39 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Microscope,BrainCircuit, Cpu, ClipboardList,Brain , Box } from 'lucide-react';
+import { Brain, Code2, Server, Layout, BrainCircuit, Github } from 'lucide-react';
 
 const researchers = [
   {
     name: "Anshuman Shukla",
     institution: "Parul University",
-    role: "Leader",
+    role: "ML/AI Engineer",
     icon: <Brain size={24} />,
+    github: "https://github.com/CoderAnshuman",
+    image: "https://avatars.githubusercontent.com/CoderAnshuman",
   },
   {
     name: "Foram Thakkar",
     institution: "Parul University",
-    role: "Lead: Computer Vision",
-    icon: <Cpu size={24} />,
+    role: "UI/UX Developer",
+    icon: <Layout size={24} />,
+    github: "https://github.com/bhumi1608",
+    image: "https://avatars.githubusercontent.com/bhumi1608",
   },
   {
     name: "Tirth Patel",
     institution: "Parul University",
-    role: "Clinical Validation",
-    icon: <ClipboardList size={24} />,
+    role: "Backend Developer",
+    icon: <Server size={24} />,
+    github: "https://github.com/tirthptl05",
+    image: "https://avatars.githubusercontent.com/tirthptl05",
   },
   {
     name: "Daksh Patel",
     institution: "Parul University",
-    role: "System Architecture",
-    icon: <Box size={24} />,
+    role: "Frontend Engineer",
+    icon: <Code2 size={24} />,
+    github: "https://github.com/DakshPatel06",
+    image: "https://avatars.githubusercontent.com/DakshPatel06",
   },
 ];
 
@@ -41,13 +49,15 @@ export const ConsortiumScreen: React.FC = () => {
   return (
     <div className="relative min-h-screen py-32 px-6 lg:px-24 overflow-hidden flex flex-col">
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
-      
+
       <div className="container mx-auto max-w-7xl relative z-10 flex-grow">
         <div className="text-center mb-24">
           <span className="inline-block py-1 px-4 rounded-full bg-slate-100 text-slate-500 text-[10px] font-heading font-bold tracking-[0.2em] uppercase border border-slate-200 mb-6">
             Consortium
           </span>
-          <h2 className="text-slate-400 font-heading font-semibold text-sm tracking-[0.3em] uppercase mb-4">Developed in Partnership With</h2>
+          <h2 className="text-slate-400 font-heading font-semibold text-sm tracking-[0.3em] uppercase mb-4">
+            Developed in Partnership With
+          </h2>
           <div className="h-px w-24 bg-slate-300 mx-auto mt-8" />
         </div>
 
@@ -59,38 +69,74 @@ export const ConsortiumScreen: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -8 }}
-              className="glass-panel rounded-xl p-8 border-slate-200 flex flex-col justify-between h-[320px] group transition-all duration-300"
+              className="group h-[320px] cursor-pointer"
+              style={{ perspective: '1000px' }}
             >
-              <div>
-                <div className="w-14 h-14 mb-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200 text-slate-400 group-hover:text-surgical-blue group-hover:bg-blue-50 transition-colors">
-                  {person.icon}
+              <div
+                className="relative w-full h-full transition-transform duration-700"
+                style={{ transformStyle: 'preserve-3d' }}
+                onMouseEnter={e => (e.currentTarget.style.transform = 'rotateY(180deg)')}
+                onMouseLeave={e => (e.currentTarget.style.transform = 'rotateY(0deg)')}
+              >
+                {/* FRONT - Photo */}
+                <div
+                  className="absolute inset-0 rounded-xl overflow-hidden border border-slate-200"
+                  style={{ backfaceVisibility: 'hidden' }}
+                >
+                  <img
+                    src={person.image}
+                    alt={person.name}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-4 left-4">
+                    <h3 className="text-white font-heading font-bold text-xl">{person.name}</h3>
+                    <p className="text-white/70 text-sm">{person.institution}</p>
+                  </div>
                 </div>
-                <h3 className="text-slate-900 font-heading font-bold text-xl mb-1">{person.name}</h3>
-                <p className="text-slate-500 text-sm font-medium">{person.institution}</p>
-              </div>
-              
-              <div className="pt-6 border-t border-slate-100">
-                <span className="text-slate-400 font-mono text-[9px] uppercase tracking-widest block mb-2">Role</span>
-                <span className="text-slate-700 font-mono text-[10px] bg-slate-100 px-3 py-1.5 rounded border border-slate-200 inline-block font-bold">
-                  {person.role}
-                </span>
+
+                {/* BACK - Details */}
+                <div
+                  className="absolute inset-0 rounded-xl glass-panel border border-slate-200 p-8 flex flex-col justify-between"
+                  style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                >
+                  <div>
+                    <div className="w-14 h-14 mb-6 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200 text-surgical-blue">
+                      {person.icon}
+                    </div>
+                    <h3 className="text-slate-900 font-heading font-bold text-xl mb-1">{person.name}</h3>
+                    <p className="text-slate-500 text-sm font-medium">{person.institution}</p>
+                  </div>
+                  <div className="pt-6 border-t border-slate-100">
+                    <span className="text-slate-400 font-mono text-[9px] uppercase tracking-widest block mb-2">Role</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-700 font-mono text-[10px] bg-slate-100 px-3 py-1.5 rounded border border-slate-200 font-bold">
+                        {person.role}
+                      </span>
+                      <a
+                        href={person.github}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-slate-400 hover:text-slate-900 transition-colors"
+                      >
+                        <Github size={16} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           ))}
         </div>
 
         <div className="border-t border-slate-200 pt-20 pb-12">
-          <p className="text-center text-slate-400 text-[10px] font-mono mb-12 uppercase tracking-[0.4em] font-bold">Trust & Verification Partners</p>
+          <p className="text-center text-slate-400 text-[10px] font-mono mb-12 uppercase tracking-[0.4em] font-bold">
+            Trust & Verification Partners
+          </p>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 lg:gap-24 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
             {partners.map((url, i) => (
-              <img 
-                key={i} 
-                src={url} 
-                alt="Partner Logo" 
-                className="h-8 md:h-10 object-contain"
-                referrerPolicy="no-referrer"
-              />
+              <img key={i} src={url} alt="Partner Logo" className="h-8 md:h-10 object-contain" referrerPolicy="no-referrer" />
             ))}
           </div>
         </div>
@@ -106,11 +152,10 @@ export const ConsortiumScreen: React.FC = () => {
             <span className="hidden md:block w-px h-4 bg-slate-200" />
             <p>© 2026 GliomaX Precision Glass. All rights reserved.</p>
           </div>
-          
           <div className="flex items-center gap-12">
-            <a href="#" className="hover:text-slate-900 transition-colors">Documentation</a>
-            <a href="#" className="hover:text-slate-900 transition-colors">GitHub (Private)</a>
-            <a href="#" className="hover:text-slate-900 transition-colors">Contact Support</a>
+            <a href="https://github.com/CoderAnshuman" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">Documentation</a>
+            <a href="https://github.com/CoderAnshuman" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">GitHub</a>
+            <a href="mailto:anshumanmshukla@gmail.com" className="hover:text-slate-900 transition-colors">Contact Support</a>
           </div>
         </div>
       </footer>

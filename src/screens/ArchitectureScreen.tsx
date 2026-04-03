@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Layers, Info, AlertCircle, Search } from 'lucide-react';
 
+
 export const ArchitectureScreen: React.FC = () => {
   return (
     <div className="relative min-h-screen py-32 px-6 lg:px-24 overflow-hidden">
@@ -75,12 +76,57 @@ export const ArchitectureScreen: React.FC = () => {
             transition={{ delay: 0.2 }}
             className="relative lg:absolute lg:top-[30%] lg:left-1/2 lg:-translate-x-1/2 z-20 group w-full max-w-[450px]"
           >
-            <div className="relative w-full aspect-[3/2] lg:w-[450px] lg:h-[300px] lg:[transform:rotateX(55deg)_rotateZ(-45deg)] rounded-lg shadow-xl overflow-hidden bg-slate-900 border border-surgical-blue/30">
-              <div className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.4),transparent_50%),radial-gradient(circle_at_70%_80%,rgba(59,130,246,0.3),transparent_40%)]" />
-              <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-surgical-blue rounded-full shadow-[0_0_10px_#3B82F6]" />
-              <div className="absolute top-1/2 left-2/3 w-3 h-3 bg-surgical-blue rounded-full shadow-[0_0_15px_#3B82F6]" />
-              <div className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-surgical-blue rounded-full shadow-[0_0_8px_#3B82F6]" />
-            </div>
+ {/* Layer 2: Feature Extraction */}
+{/* Layer 2: Feature Extraction */}
+{/* Layer 2: Feature Extraction */}
+<div className="relative w-full aspect-[3/2] lg:w-[450px] lg:h-[300px] lg:[transform:rotateX(55deg)_rotateZ(-45deg)] rounded-lg shadow-xl overflow-hidden bg-[#020818] border border-surgical-blue/30">
+
+  {/* Brain outline SVG */}
+  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 450 300">
+    {/* Brain shape */}
+    <ellipse cx="225" cy="150" rx="160" ry="110" fill="none" stroke="rgba(59,130,246,0.2)" strokeWidth="1"/>
+    <ellipse cx="225" cy="150" rx="120" ry="80" fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="1"/>
+    
+    {/* Brain folds */}
+    <path d="M100,150 Q130,100 160,130 Q190,160 220,120 Q250,80 280,130 Q310,160 340,130 Q360,110 370,150" fill="none" stroke="rgba(59,130,246,0.3)" strokeWidth="1.5"/>
+    <path d="M110,170 Q140,140 170,160 Q200,180 230,150 Q260,120 290,155 Q320,175 350,160" fill="none" stroke="rgba(59,130,246,0.2)" strokeWidth="1"/>
+
+    {/* Tumor region - glowing red spot */}
+    <circle cx="270" cy="130" r="28" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.6)" strokeWidth="1.5"/>
+    <circle cx="270" cy="130" r="18" fill="rgba(239,68,68,0.25)" stroke="rgba(239,68,68,0.8)" strokeWidth="1"/>
+    <circle cx="270" cy="130" r="8" fill="rgba(239,68,68,0.6)"/>
+
+    {/* Feature extraction points */}
+    {[[180,120],[200,160],[240,140],[290,170],[310,130],[250,110]].map(([x,y],i) => (
+      <g key={i}>
+        <circle cx={x} cy={y} r="3" fill="#3B82F6" opacity="0.8"/>
+        <circle cx={x} cy={y} r="6" fill="none" stroke="#3B82F6" strokeWidth="0.5" opacity="0.4"/>
+        <line x1={x} y1={y} x2="270" y2="130" stroke="rgba(59,130,246,0.2)" strokeWidth="0.5" strokeDasharray="3,3"/>
+      </g>
+    ))}
+
+    {/* Scan line */}
+    <line x1="60" y1="0" x2="60" y2="300" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5">
+      <animateTransform attributeName="transform" type="translate" from="0,0" to="330,0" dur="2.5s" repeatCount="indefinite"/>
+    </line>
+
+    {/* Ping animation around tumor */}
+    <circle cx="270" cy="130" r="35" fill="none" stroke="rgba(239,68,68,0.4)" strokeWidth="1">
+      <animate attributeName="r" values="28;45;28" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite"/>
+    </circle>
+  </svg>
+
+  {/* Corner labels */}
+  <div className="absolute top-2 left-3 font-mono text-[8px] text-surgical-blue/50 uppercase">MRI T1ce · Axial</div>
+  <div className="absolute bottom-2 right-3 font-mono text-[8px] text-clinical-red/70 uppercase tracking-widest">⚠ Glioma Detected</div>
+
+  {/* Overlay gradient */}
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_43%,rgba(239,68,68,0.08),transparent_50%)]"/>
+</div>
+
+
+ 
             
             <div className="mt-6 lg:mt-0 lg:absolute lg:top-10 lg:-right-[300px] lg:w-72 glass-panel p-6 rounded-lg border-l-4 border-l-surgical-blue border-slate-200">
               <div className="flex items-center justify-between mb-3">
@@ -90,7 +136,7 @@ export const ArchitectureScreen: React.FC = () => {
               <h3 className="font-heading font-bold text-xl text-slate-900 mb-2">Feature Extraction</h3>
               <div className="h-px w-full bg-slate-100 my-3" />
               <div className="flex flex-col gap-2 text-[10px] font-mono text-slate-500">
-                <div className="flex justify-between"><span>Arch:</span> <span className="text-slate-900 font-bold">ResNet50</span></div>
+                <div className="flex justify-between"><span>Arch:</span> <span className="text-slate-900 font-bold">EfficientNet-B3</span></div>
                 <div className="flex justify-between"><span>Features:</span> <span className="text-slate-900 font-bold">2048 dims</span></div>
               </div>
             </div>
@@ -105,9 +151,15 @@ export const ArchitectureScreen: React.FC = () => {
             className="relative lg:absolute lg:top-[60%] lg:left-1/2 lg:-translate-x-1/2 z-10 group w-full max-w-[450px]"
           >
             <div className="relative w-full aspect-[3/2] lg:w-[450px] lg:h-[300px] lg:[transform:rotateX(55deg)_rotateZ(-45deg)] rounded-lg shadow-xl overflow-hidden bg-slate-900 border border-clinical-red/40">
-              <div className="absolute inset-0 opacity-80 bg-[radial-gradient(circle_at_60%_40%,rgba(239,68,68,0.9),rgba(239,68,68,0.4)_20%,transparent_60%)]" />
-              <div className="absolute top-[40%] left-[60%] -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-clinical-red/50 rounded-full animate-ping" />
-            </div>
+<img 
+  src="/GliomaXF/vit-brain.jpeg"
+  alt="ViT Attention Map" 
+  className="absolute inset-0 w-full h-full object-cover opacity-100"
+/>
+  
+  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_60%_40%,rgba(239,68,68,0.9),rgba(239,68,68,0.4)_20%,transparent_60%)]" />
+  <div className="absolute top-[40%] left-[60%] -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-clinical-red/50 rounded-full animate-ping" />
+</div>
             
             <div className="mt-6 lg:mt-0 lg:absolute lg:top-10 lg:-left-[300px] lg:w-72 glass-panel p-6 rounded-lg border-l-4 border-l-clinical-red border-slate-200">
               <div className="flex items-center justify-between mb-3">

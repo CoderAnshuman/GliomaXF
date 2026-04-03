@@ -1,10 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 const getAI = () => {
-  const apiKey = process.env.GEMINI_API_KEY || "fu";
+  const apiKey = import.meta.env?.VITE_GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
-    throw new Error("API Key Missing: Please set GEMINI_API_KEY in your .env file or AI Studio secrets.");
+    console.error("And error in getAI: missing API key", { key: apiKey });
+    throw new Error("API Key Missing: Please set VITE_GEMINI_API_KEY in your .env file or AI Studio secrets.");
   }
+
+  console.debug("Gemini API key loaded successfully.");
   return new GoogleGenAI({ apiKey });
 };
 
@@ -78,6 +81,7 @@ export async function findNearbyResearchCenters(lat: number, lng: number) {
 }
 
 const API_URL = "https://anshumanshukla-gliomax-docker.hf.space";
+
 // src/services/modelService.ts
 export async function analyzeWithCustomModel(file: File) {
   const formData = new FormData();
