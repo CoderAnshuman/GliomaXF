@@ -152,7 +152,7 @@ export const ArchitectureScreen: React.FC = () => {
           >
             <div className="relative w-full aspect-[3/2] lg:w-[450px] lg:h-[300px] lg:[transform:rotateX(55deg)_rotateZ(-45deg)] rounded-lg shadow-xl overflow-hidden bg-slate-900 border border-clinical-red/40">
 <img 
-  src="/GliomaXF/vit-brain.jpeg"
+  src="src\assets\vit-brain.jpeg"
   alt="ViT Attention Map" 
   className="absolute inset-0 w-full h-full object-cover opacity-100"
 />

@@ -8,32 +8,32 @@ const researchers = [
     institution: "Parul University",
     role: "ML/AI Engineer",
     icon: <Brain size={24} />,
+    image: "src\\assets\\anshumanImg.jpeg",
     github: "https://github.com/CoderAnshuman",
-    image: "https://avatars.githubusercontent.com/CoderAnshuman",
   },
   {
     name: "Foram Thakkar",
     institution: "Parul University",
     role: "UI/UX Developer",
     icon: <Layout size={24} />,
-    github: "https://github.com/bhumi1608",
-    image: "https://avatars.githubusercontent.com/bhumi1608",
+    image: "src\\assets\\foramImg.jpeg",
+    github: "https://github.com/foramthakkar",
   },
   {
     name: "Tirth Patel",
     institution: "Parul University",
     role: "Backend Developer",
     icon: <Server size={24} />,
-    github: "https://github.com/tirthptl05",
-    image: "https://avatars.githubusercontent.com/tirthptl05",
+    image: "src\\assets\\tirthImg.jpeg",
+    github: "https://github.com/tirthpatel",
   },
   {
     name: "Daksh Patel",
     institution: "Parul University",
     role: "Frontend Engineer",
     icon: <Code2 size={24} />,
-    github: "https://github.com/DakshPatel06",
-    image: "https://avatars.githubusercontent.com/DakshPatel06",
+    image: "src\\assets\\dakshImg.jpeg",
+    github: "https://github.com/dakshpatel",
   },
 ];
 
@@ -78,28 +78,10 @@ export const ConsortiumScreen: React.FC = () => {
                 onMouseEnter={e => (e.currentTarget.style.transform = 'rotateY(180deg)')}
                 onMouseLeave={e => (e.currentTarget.style.transform = 'rotateY(0deg)')}
               >
-                {/* FRONT - Photo */}
-                <div
-                  className="absolute inset-0 rounded-xl overflow-hidden border border-slate-200"
-                  style={{ backfaceVisibility: 'hidden' }}
-                >
-                  <img
-                    src={person.image}
-                    alt={person.name}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <div className="absolute bottom-4 left-4">
-                    <h3 className="text-white font-heading font-bold text-xl">{person.name}</h3>
-                    <p className="text-white/70 text-sm">{person.institution}</p>
-                  </div>
-                </div>
-
-                {/* BACK - Details */}
+                {/* FRONT — Role Details */}
                 <div
                   className="absolute inset-0 rounded-xl glass-panel border border-slate-200 p-8 flex flex-col justify-between"
-                  style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                  style={{ backfaceVisibility: 'hidden' }}
                 >
                   <div>
                     <div className="w-14 h-14 mb-6 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200 text-surgical-blue">
@@ -114,17 +96,41 @@ export const ConsortiumScreen: React.FC = () => {
                       <span className="text-slate-700 font-mono text-[10px] bg-slate-100 px-3 py-1.5 rounded border border-slate-200 font-bold">
                         {person.role}
                       </span>
-                      <a
-                        href={person.github}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-slate-400 hover:text-slate-900 transition-colors"
-                      >
-                        <Github size={16} />
-                      </a>
+                      {/* Hint icon — non-interactive on front */}
+                      <Github size={16} className="text-slate-300" />
                     </div>
                   </div>
                 </div>
+
+                {/* BACK — GitHub Profile Photo */}
+                <div
+                  className="absolute inset-0 rounded-xl overflow-hidden border border-slate-200"
+                  style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                >
+                  <img
+                    src={person.image}
+                    alt={person.name}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+                    <div>
+                      <h3 className="text-white font-heading font-bold text-xl">{person.name}</h3>
+                      <p className="text-white/70 text-sm">{person.institution}</p>
+                    </div>
+                    <a
+                      href={person.github}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-white/80 hover:text-white transition-colors mb-1"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <Github size={20} />
+                    </a>
+                  </div>
+                </div>
+
               </div>
             </motion.div>
           ))}
@@ -153,9 +159,11 @@ export const ConsortiumScreen: React.FC = () => {
             <p>© 2026 GliomaX Precision Glass. All rights reserved.</p>
           </div>
           <div className="flex items-center gap-12">
-            <a href="https://github.com/CoderAnshuman" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">Documentation</a>
-            <a href="https://github.com/CoderAnshuman" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">GitHub</a>
-            <a href="mailto:anshumanmshukla@gmail.com" className="hover:text-slate-900 transition-colors">Contact Support</a>
+            <a href="https://github.com/CoderAnshuman/GliomaXF.git" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">Documentation</a>
+            <a href="https://github.com/CoderAnshuman/GliomaXF.git" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">GitHub</a>
+            <a href="mailto:anshumanmshukla@gmail.com">
+  Contact Support
+</a>
           </div>
         </div>
       </footer>
