@@ -14,37 +14,50 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #  STEP 0 — Auto-install missing packages (runs only when needed)
 # ─────────────────────────────────────────────────────────────────────────────
+import subprocess, sys
+
+def _pip(*pkgs):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", *pkgs])
 
 try:
     import torch
 except ImportError:
     print("[setup] Installing PyTorch...")
-   
+    _pip("torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu121")
 
 try:
     import timm
 except ImportError:
     print("[setup] Installing timm...")
-
+    _pip("timm")
 
 try:
     import clip
 except ImportError:
     print("[setup] Installing CLIP...")
-   
+    _pip("git+https://github.com/openai/CLIP.git")
 
 try:
     import fastapi
 except ImportError:
     print("[setup] Installing FastAPI + uvicorn...")
-    
+    _pip("fastapi", "uvicorn[standard]", "python-multipart")
+
+try:
+    import google.genai as genai
+except ImportError:
+    print("[setup] Installing Google GenAI...")
 
 # remaining stdlib-adjacent deps
 try:
     import PIL
 except ImportError:
-  
+    _pip("Pillow")
 
+try:
+    import matplotlib
+except ImportError:
+    _pip("matplotlib")
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  STEP 1 — Imports (all guaranteed installed now)
@@ -62,23 +75,31 @@ import timm
 import clip
 from PIL import Image
 from torchvision import transforms
+import matplotlib
+matplotlib.use("Agg")                   # headless — no display needed
+import matplotlib.pyplot as plt
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import google.genai as genai
+import os
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  CONFIGURATION  ←  Edit this block to customise behaviour
 # ─────────────────────────────────────────────────────────────────────────────
 
-MODEL_PATH  = "./best_model.pth"        # ← put your .pth file here
+from huggingface_hub import hf_hub_download
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
+
+MODEL_PATH = hf_hub_download(
+    repo_id="AnshumanShukla/Gliomax",
+    filename="best_model.pth"
+)   
     
-import os
-PORT = int(os.environ.get("PORT", 8000))
+
+PORT = int(os.environ.get("PORT", 7860))
 
 # If True, requests from any origin are accepted (fine for local dev).
 # Set to your React dev URL (e.g. "http://localhost:5173") for tighter security.
@@ -121,7 +142,7 @@ SUGGESTED_STEPS = {
 
 # ── Validation thresholds ─────────────────────────────────────────────────────
 #   Raise CLIP_MRI_THRESHOLD if too many non-MRI images slip through.
-#   Lower GRAYSCALE_SAT_THRESHOLD if real MRIs are being rejected. 
+#   Lower GRAYSCALE_SAT_THRESHOLD if real MRIs are being rejected.
 
 GRAYSCALE_SAT_THRESHOLD     = 0.15     # Layer 1: max mean colour saturation
 GRAYSCALE_STD_THRESHOLD     = 0.08     # Layer 1: min pixel intensity std (rejects blank images)
@@ -300,6 +321,20 @@ def _startup():
     _S["text_feat"]  = text_feat
     _S["n_pos"]      = len(CLIP_POSITIVE)
 
+# ── Gemini ───────────────────────────────────────────────────────────────
+
+if GEMINI_API_KEY and GEMINI_API_KEY != "your_gemini_api_key_here":
+    log.info("Initializing Gemini AI...")
+    # Initialize the new Client instead of using .configure()
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    
+    # Store the client in your settings dictionary
+    _S["gemini"] = client
+    log.info("✅ Gemini ready")
+else:
+    log.warning("Gemini API key not set, chat functionality will be disabled")
+    _S["gemini"] = None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Validation — Layer 1: Grayscale heuristic
@@ -399,7 +434,28 @@ def _layer3_confidence(conf: float):
 #  Inference
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _b64_png(arr_hw3: np.ndarray, cmap: str | None = None) -> str:
+    """Encode a numpy array (H,W,3) or (H,W) as a base64 PNG string."""
+    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
+    ax.axis("off")
+    ax.imshow(np.clip(arr_hw3, 0, 1) if cmap is None else arr_hw3, cmap=cmap)
+    plt.tight_layout(pad=0)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode()
 
+
+def _overlay_b64(base: np.ndarray, mask: np.ndarray, cmap: str, alpha: float) -> str:
+    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
+    ax.axis("off")
+    ax.imshow(np.clip(base, 0, 1))
+    ax.imshow(mask, cmap=cmap, alpha=alpha)
+    plt.tight_layout(pad=0)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode()
 
 
 def _run_inference(img: Image.Image) -> dict:
@@ -498,6 +554,14 @@ class ValidateResponse(BaseModel):
     warnings : list[str]
     details  : dict
 
+class ChatRequest(BaseModel):
+    message: str
+    history: Optional[list[dict]] = None
+
+class ChatResponse(BaseModel):
+    response: str
+    error: Optional[str] = None
+    
 # ── Allowed MIME types ────────────────────────────────────────────────────────
 
 _ALLOWED = {"image/jpeg", "image/png", "image/bmp", "image/tiff", "image/webp"}
@@ -513,6 +577,10 @@ def _open_image(raw: bytes) -> Image.Image:
         raise HTTPException(400, f"Cannot read image: {e}")
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@app.get("/")
+def root():
+    return {"message": "API is running"}
 
 @app.get("/health", summary="Server health check")
 def health():
@@ -612,6 +680,34 @@ async def predict(file: UploadFile = File(...)):
         inference_ms  = ms,
     )
 
+@app.post("/chat", response_model=ChatResponse,
+          summary="Chat with Gemini AI about brain tumor diagnostics")
+async def chat(request: ChatRequest):
+    if not _S.get("gemini"):
+        return ChatResponse(response="", error="Gemini AI not configured. Please set GEMINI_API_KEY environment variable.")
+
+    try:
+        model = _S["gemini"]
+        history = request.history or []
+        
+        # Convert history format if needed
+        chat_history = []
+        for msg in history:
+            if msg.get("role") == "user":
+                chat_history.append({"role": "user", "parts": [{"text": msg.get("content", "")}]})
+            elif msg.get("role") == "model":
+                chat_history.append({"role": "model", "parts": [{"text": msg.get("content", "")}]})
+
+        chat = model.start_chat(history=chat_history)
+        
+        system_instruction = """You are Gliomax AI, a medical assistant for neuro-oncologists. You provide information about brain tumor diagnostics (Glioma, Meningioma, Pituitary, and No Tumor), our CNN-Transformer architecture, and clinical performance. Be precise, clinical, and helpful. Use markdown for formatting. If asked about your creators, mention Anshuman Shukla as the Leader from Parul University."""
+        
+        response = chat.send_message(f"{system_instruction}\n\nUser: {request.message}")
+        return ChatResponse(response=response.text)
+    except Exception as e:
+        log.error(f"Chat error: {e}")
+        return ChatResponse(response="", error=str(e))
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Entry point
@@ -619,6 +715,10 @@ async def predict(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
+
+    HOST = "0.0.0.0"
+    PORT = int(os.environ.get("PORT", 7860))
+
     print("\n" + "="*60)
     print("  🧠  Brain Tumor Detection API")
     print(f"  Model   : {MODEL_PATH}")
@@ -626,4 +726,5 @@ if __name__ == "__main__":
     print(f"  URL     : http://localhost:{PORT}")
     print(f"  API docs: http://localhost:{PORT}/docs")
     print("="*60 + "\n")
+
     uvicorn.run(app, host=HOST, port=PORT, log_level="info")

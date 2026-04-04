@@ -1,16 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const getAI = () => {
-  const apiKey = import.meta.env?.VITE_GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-  if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
-    console.error("And error in getAI: missing API key", { key: apiKey });
-    throw new Error("API Key Missing: Please set VITE_GEMINI_API_KEY in your .env file or AI Studio secrets.");
-  }
-
-  console.debug("Gemini API key loaded successfully.");
-  return new GoogleGenAI({ apiKey });
-};
-
 export async function analyzeMRI(base64Image: string, mimeType: string) {
   try {
     // Convert base64 to File for custom model analysis
@@ -31,52 +18,35 @@ export async function analyzeMRI(base64Image: string, mimeType: string) {
 
 export async function chatWithGemini(message: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[] = []) {
   try {
-    const ai = getAI();
-    const chat = ai.chats.create({
-      model: "gemini-3-flash-preview", // Switched to Flash for higher rate limits
-      config: {
-        systemInstruction: "You are Gliomax AI, a medical assistant for neuro-oncologists. You provide information about brain tumor diagnostics (Glioma, Meningioma, Pituitary, and No Tumor), our CNN-Transformer architecture, and clinical performance. Be precise, clinical, and helpful. Use markdown for formatting. If asked about your creators, mention Anshuman Shukla as the Leader from Parul University.",
+    const response = await fetch('http://localhost:8000/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      history: history,
+      body: JSON.stringify({
+        message,
+        history: history.map(h => ({
+          role: h.role,
+          content: h.parts.map(p => p.text).join('')
+        }))
+      }),
     });
 
-    const result = await chat.sendMessage({ message });
-    return result.text;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    return data.response;
   } catch (e: any) {
     console.error("Chat Error:", e);
     if (e.message?.includes("429") || e.message?.includes("RESOURCE_EXHAUSTED")) {
       throw new Error("Rate limit exceeded. Please wait a moment before sending another message.");
     }
     throw new Error(e.message || "Failed to connect to clinical database.");
-  }
-}
-
-export async function findNearbyResearchCenters(lat: number, lng: number) {
-  try {
-    const ai = getAI();
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: "Find major neuro-oncology research centers and hospitals specializing in brain tumor treatment near these coordinates.",
-      config: {
-        tools: [{ googleMaps: {} }],
-        toolConfig: {
-          retrievalConfig: {
-            latLng: {
-              latitude: lat,
-              longitude: lng
-            }
-          }
-        }
-      },
-    });
-    
-    return {
-      text: response.text,
-      places: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
-    };
-  } catch (e: any) {
-    console.error("Maps Error:", e);
-    throw new Error(e.message || "Failed to search for nearby centers.");
   }
 }
 
