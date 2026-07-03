@@ -40,7 +40,7 @@
 
 ## 🔍 Overview
 
-BrainScan AI tackles a four-class MRI classification problem using a **dual-branch hybrid model**:
+Gliomax tackles a four-class MRI classification problem using a **dual-branch hybrid model**:
 
 | Branch | Backbone | Role | Output Dim |
 |--------|----------|------|-----------|
@@ -384,7 +384,7 @@ Open **http://localhost:8000/docs** for the interactive Swagger UI.
 
 ---
 
-## 🚀 Deploy to Render
+## 🚀 Deploy to Hugging Face
 
 ### 1 — Host your model weights
 
