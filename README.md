@@ -31,7 +31,7 @@
 - [Input Validation Pipeline](#-input-validation-pipeline)
 - [API Reference](#-api-reference)
 - [Local Setup](#-local-setup)
-- [Deploy to Render](#-deploy-to-render)
+- [Deployed to HF Spaces](#-deployed-to-HF-Spaces)
 - [Project Structure](#-project-structure)
 - [Explainability](#-explainability)
 - [Limitations & Disclaimer](#-limitations--disclaimer)
