@@ -8,7 +8,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.3-ee4c2c?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Hugging Face Space](https://img.shields.io/badge/🤗-Live%20Demo-yellow?style=for-the-badge)](https://huggingface.co/spaces/AnshumanShukla/gliomax-docker)
+[![Deployed on Hugging Face Spaces](https://img.shields.io/badge/Deployed%20on-Hugging%20Face%20Spaces-FFD21E?style=flat-square&logo=huggingface&logoColor=black)](https://huggingface.co/spaces/AnshumanShukla/gliomax-docker)
 
 <br/>
 
