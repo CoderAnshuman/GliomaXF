@@ -8,7 +8,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.3-ee4c2c?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Deployed on Render](https://img.shields.io/badge/Deployed%20on-Render-46e3b7?style=flat-square&logo=render&logoColor=white)](https://render.com)
+[![Deployed on Hugging Face Spaces](https://img.shields.io/badge/Deployed%20on-Hugging%20Face%20Spaces-FFD21E?style=flat-square&logo=huggingface&logoColor=white)](https://huggingface.co/spaces/AnshumanShukla/gliomax-docker)
 
 <br/>
 
@@ -31,7 +31,7 @@
 - [Input Validation Pipeline](#-input-validation-pipeline)
 - [API Reference](#-api-reference)
 - [Local Setup](#-local-setup)
-- [Deploy to Render](#-deploy-to-render)
+- [Deployed to HF Spaces](#-deployed-to-HF-Spaces)
 - [Project Structure](#-project-structure)
 - [Explainability](#-explainability)
 - [Limitations & Disclaimer](#-limitations--disclaimer)
@@ -40,7 +40,7 @@
 
 ## 🔍 Overview
 
-BrainScan AI tackles a four-class MRI classification problem using a **dual-branch hybrid model**:
+Gliomax tackles a four-class MRI classification problem using a **dual-branch hybrid model**:
 
 | Branch | Backbone | Role | Output Dim |
 |--------|----------|------|-----------|
@@ -384,7 +384,7 @@ Open **http://localhost:8000/docs** for the interactive Swagger UI.
 
 ---
 
-## 🚀 Deploy to Render
+## 🚀 Deploy to Hugging Face
 
 ### 1 — Host your model weights
 
