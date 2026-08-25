@@ -9,6 +9,7 @@ export const AnalysisScreen: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeImageTab, setActiveImageTab] = useState<'gradcam' | 'vit_attention' | 'original'>('gradcam');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,7 +27,7 @@ export const AnalysisScreen: React.FC = () => {
     setFile(selectedFile);
     setError(null);
     setResult(null);
-    
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result as string);
@@ -44,16 +45,17 @@ export const AnalysisScreen: React.FC = () => {
 
   const runAnalysis = async () => {
     if (!preview || !file) return;
-    
+
     setIsAnalyzing(true);
     setError(null);
-    
+
     try {
       const analysisResult = await analyzeMRI(preview, file.type);
-      
+
       // The analyzeMRI function now throws errors for validation failures
       // and returns success results directly
       setResult(analysisResult);
+      setActiveImageTab('gradcam');
     } catch (err: any) {
       setError(err.message || 'Connection error. Please check your connection.');
     } finally {
@@ -64,7 +66,7 @@ export const AnalysisScreen: React.FC = () => {
   return (
     <div className="relative min-h-screen py-32 px-6 lg:px-24 overflow-hidden">
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
-      
+
       <div className="container mx-auto max-w-6xl relative z-10">
         <div className="flex flex-col lg:flex-row gap-12">
           {/* Left: Upload Section */}
@@ -80,19 +82,18 @@ export const AnalysisScreen: React.FC = () => {
               </p>
             </div>
 
-            <div 
+            <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
-              className={`glass-panel border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center transition-all ${
-                preview ? 'border-surgical-blue bg-blue-50/10' : 'border-slate-200 hover:border-slate-300'
-              }`}
+              className={`glass-panel border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center transition-all ${preview ? 'border-surgical-blue bg-blue-50/10' : 'border-slate-200 hover:border-slate-300'
+                }`}
             >
               {preview ? (
                 <div className="relative w-full max-w-md aspect-square rounded-lg overflow-hidden shadow-2xl border border-slate-200">
                   <img src={preview} alt="MRI Preview" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
-                    <button 
-                      onClick={() => { setFile(null); setPreview(null); setResult(null); }}
+                    <button
+                      onClick={() => { setFile(null); setPreview(null); setResult(null); setActiveImageTab('gradcam'); }}
                       className="text-white text-xs font-bold uppercase tracking-widest hover:underline"
                     >
                       Remove Image
@@ -106,17 +107,17 @@ export const AnalysisScreen: React.FC = () => {
                   </div>
                   <h3 className="text-slate-900 font-bold text-xl mb-2">Drop MRI Scan Here</h3>
                   <p className="text-slate-400 text-sm mb-8">Supports DICOM, JPG, PNG (Max 10MB)</p>
-                  <button 
+                  <button
                     onClick={() => fileInputRef.current?.click()}
                     className="bg-slate-900 text-white px-8 py-3 rounded-sm text-sm font-bold uppercase tracking-widest hover:bg-slate-800 transition-all"
                   >
                     Select File
                   </button>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
                     accept="image/*"
                   />
                 </div>
@@ -180,7 +181,9 @@ export const AnalysisScreen: React.FC = () => {
                           <Zap size={14} />
                           <span className="text-[9px] font-mono uppercase font-bold">Latency</span>
                         </div>
-                        <div className="text-sm font-bold text-slate-900">12.4ms</div>
+                        <div className="text-sm font-bold text-slate-900">
+                          {result.inferenceMs ? `${result.inferenceMs}ms` : '—'}
+                        </div>
                       </div>
                       <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                         <div className="flex items-center gap-2 text-slate-400 mb-1">
@@ -214,6 +217,46 @@ export const AnalysisScreen: React.FC = () => {
                         </div>
                       )}
 
+                      {result.images && (
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                              <Layers size={14} className="text-slate-400" />
+                              Explainability
+                            </h4>
+                            <div className="flex gap-1 bg-slate-50 border border-slate-100 rounded-md p-0.5">
+                              {(['gradcam', 'vit_attention', 'original'] as const).map((tab) => (
+                                <button
+                                  key={tab}
+                                  onClick={() => setActiveImageTab(tab)}
+                                  className={`px-2.5 py-1 rounded text-[9px] font-mono font-bold uppercase tracking-widest transition-all ${activeImageTab === tab
+                                    ? 'bg-surgical-blue text-white'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                    }`}
+                                >
+                                  {tab === 'gradcam' ? 'Grad-CAM' : tab === 'vit_attention' ? 'ViT Attn' : 'Original'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-square bg-slate-900">
+                            <img
+                              src={`data:image/png;base64,${result.images[activeImageTab]}`}
+                              alt={`${activeImageTab} visualization`}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            {activeImageTab === 'gradcam' &&
+                              "Grad-CAM highlights the regions the CNN branch weighted most heavily for this prediction — warmer colours indicate higher influence."}
+                            {activeImageTab === 'vit_attention' &&
+                              "The ViT branch's attention map, showing which patches the transformer attended to most from the classification token."}
+                            {activeImageTab === 'original' &&
+                              'The normalised input as seen by the model, prior to any overlay.'}
+                          </p>
+                        </div>
+                      )}
+
                       {result.allProbabilities && (
                         <div>
                           <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Class Probabilities</h4>
@@ -226,12 +269,11 @@ export const AnalysisScreen: React.FC = () => {
                                     <span className="text-xs font-bold text-slate-900">{(prob * 100).toFixed(1)}%</span>
                                   </div>
                                   <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                    <div 
-                                      className={`h-full transition-all ${
-                                        cls === result.diagnosis 
-                                          ? 'bg-surgical-blue' 
-                                          : 'bg-slate-300'
-                                      }`}
+                                    <div
+                                      className={`h-full transition-all ${cls === result.diagnosis
+                                        ? 'bg-surgical-blue'
+                                        : 'bg-slate-300'
+                                        }`}
                                       style={{ width: `${(prob as number) * 100}%` }}
                                     />
                                   </div>

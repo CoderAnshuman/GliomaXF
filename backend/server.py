@@ -77,7 +77,8 @@ from PIL import Image
 from torchvision import transforms
 import matplotlib
 matplotlib.use("Agg")                   # headless — no display needed
-import matplotlib.pyplot as plt
+from matplotlib import colormaps       # only used for jet/inferno LUTs — no Figure/Axes overhead
+import asyncio
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -146,7 +147,7 @@ SUGGESTED_STEPS = {
 
 GRAYSCALE_SAT_THRESHOLD     = 0.15     # Layer 1: max mean colour saturation
 GRAYSCALE_STD_THRESHOLD     = 0.08     # Layer 1: min pixel intensity std (rejects blank images)
-CLIP_MRI_THRESHOLD          = 0.40     # Layer 2: min CLIP MRI score fraction
+CLIP_MRI_THRESHOLD          = 0.60     # Layer 2: min CLIP MRI score fraction (0.5 = neutral, see _layer2_clip)
 CONFIDENCE_WARN_THRESHOLD   = 0.50     # Layer 3: confidence below this → warning
 CONFIDENCE_REJECT_THRESHOLD = 0.25     # Layer 3: confidence below this → reject
 
@@ -168,6 +169,7 @@ CLIP_NEGATIVE = [
     "a photo of a person",
     "a screenshot or chart",
     "a photo of a vehicle",
+    "a black and white photo of a person"
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -241,35 +243,81 @@ class HybridCNNViT(nn.Module):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class GradCAM:
+    """
+    Runs the hybrid model exactly ONCE per request (one forward + one backward)
+    and captures everything downstream needs from that single pass:
+      - CNN activations/gradients -> Grad-CAM
+      - final ViT block's tokens  -> attention map
+      - logits                   -> class probabilities
+    Previously these were computed via 3 separate forward passes (one of them
+    a hand-rolled re-implementation of the ViT forward). That tripling was the
+    dominant cost in the 3-4s latency. It also meant a silent failure in any
+    one of the three passes (e.g. gradients never populating) produced a
+    blank/wrong image with no error surfaced.
+    """
     def __init__(self, model: HybridCNNViT):
         self.model       = model
         self.activations = None
         self.gradients   = None
-        # Hook onto last conv block of EfficientNet-B3
-        tgt = model.cnn.backbone.conv_head
-        tgt.register_forward_hook(lambda m, i, o: setattr(self, "activations", o.detach()))
-        tgt.register_full_backward_hook(lambda m, gi, go: setattr(self, "gradients", go[0].detach()))
+        self.vit_tokens  = None
+
+        cnn_tgt = model.cnn.backbone.conv_head       # last conv block of EfficientNet-B3
+        cnn_tgt.register_forward_hook(self._save_cnn_activation)
+        cnn_tgt.register_full_backward_hook(self._save_cnn_gradient)
+
+        vit_tgt = model.vit.backbone.blocks[-1]      # output of final transformer block
+        vit_tgt.register_forward_hook(self._save_vit_tokens)
+
+    def _save_cnn_activation(self, module, inp, out):
+        self.activations = out.detach()
+
+    def _save_cnn_gradient(self, module, grad_in, grad_out):
+        self.gradients = grad_out[0].detach()
+
+    def _save_vit_tokens(self, module, inp, out):
+        self.vit_tokens = out.detach()
 
     def __call__(self, img_t: torch.Tensor):
         """
         img_t: (1, 3, H, W)
-        Returns: cam (H, W numpy, 0–1), pred_class_idx (int)
+        Returns: cam (H,W numpy 0-1), vit_map (H,W numpy 0-1), probs (numpy), pred_class_idx (int)
         """
         self.model.eval()
         img_t = img_t.to(DEVICE)
         img_t.requires_grad_(True)
 
         logits    = self.model(img_t)
-        class_idx = logits.argmax(dim=1).item()
-        self.model.zero_grad()
+        class_idx = int(logits.argmax(dim=1).item())
+        self.model.zero_grad(set_to_none=True)
         logits[0, class_idx].backward()
+
+        if self.gradients is None or self.activations is None:
+            # Fails loudly now instead of silently rendering a blank overlay.
+            raise RuntimeError(
+                "Grad-CAM hooks did not fire — check that model.cnn.backbone.conv_head "
+                "is on the path from input to logits."
+            )
 
         weights = self.gradients.mean(dim=[2, 3], keepdim=True)
         cam     = F.relu((weights * self.activations).sum(dim=1, keepdim=True))
         cam     = F.interpolate(cam, (IMG_SIZE, IMG_SIZE), mode="bilinear", align_corners=False)
         cam     = cam.squeeze().cpu().numpy()
         cam     = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
-        return cam, class_idx
+
+        # ViT attention proxy — reuses tokens captured during the SAME forward
+        # pass above, instead of re-running patch_embed + blocks a second time.
+        tokens  = self.vit_tokens                              # (1, 1+P, D)
+        sim     = F.cosine_similarity(tokens[:, 0:1], tokens[:, 1:], dim=-1)
+        sim     = (sim - sim.min()) / (sim.max() - sim.min() + 1e-8)
+        n_p     = int(sim.shape[-1] ** 0.5)
+        vit_map = F.interpolate(
+            sim.reshape(1, 1, n_p, n_p).float(),
+            size=(IMG_SIZE, IMG_SIZE), mode="bilinear", align_corners=False
+        ).squeeze().cpu().numpy()
+
+        probs = F.softmax(logits.detach(), dim=1).squeeze().cpu().numpy()
+
+        return cam, vit_map, probs, class_idx
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -344,12 +392,15 @@ def _layer1_grayscale(img: Image.Image):
     """
     Returns (passed: bool, message: str, details: dict)
     Brain MRIs are near-grayscale (low HSV saturation).
+    Vectorised HSV-saturation calc (S = (max-min)/max) over every pixel —
+    replaces a pure-Python colorsys.rgb_to_hsv() loop, which was both slower
+    and (at 1-in-4 sampling) noisier than just vectorising over all pixels.
     """
-    arr     = np.array(img.convert("RGB"), dtype=np.float32) / 255.0
-    pixels  = arr.reshape(-1, 3)
-    # sample every 4th pixel for speed (still accurate on typical MRI sizes)
-    sats    = np.array([colorsys.rgb_to_hsv(r, g, b)[1] for r, g, b in pixels[::4]])
-    mean_sat = float(sats.mean())
+    arr      = np.array(img.convert("RGB"), dtype=np.float32) / 255.0
+    mx       = arr.max(axis=-1)
+    mn       = arr.min(axis=-1)
+    sat      = np.where(mx > 0, (mx - mn) / (mx + 1e-8), 0.0)
+    mean_sat = float(sat.mean())
     px_std   = float(np.mean(arr, axis=2).std())
     details  = {"mean_saturation": round(mean_sat, 4), "pixel_std": round(px_std, 4)}
 
@@ -378,6 +429,17 @@ def _layer2_clip(img: Image.Image):
     """
     Returns (passed: bool, message: str, details: dict)
     Compares image to brain MRI vs. random-object text prompts via CLIP.
+
+    Two bugs fixed here:
+    1. Missing temperature scaling. Raw cosine similarities from CLIP sit in a
+       narrow band (~0.02-0.05 apart between related/unrelated prompts), so a
+       plain softmax over them came out nearly flat regardless of the image —
+       CLIP's own logit_scale (~100x) is what makes zero-shot classification
+       discriminative at all, and it was never applied.
+    2. Prompt-count bias. Summing softmax mass over 6 positive vs 9 negative
+       prompts means even a *flat* distribution gives ~40% to "MRI" — comfortably
+       above the old 0.20 threshold. Averaging similarity per class first (2-way
+       softmax) removes the count bias so 0.5 is the true neutral point.
     """
     inp = _S["clip_prep"](img.convert("RGB")).unsqueeze(0).to(DEVICE)
     with torch.no_grad():
@@ -386,14 +448,19 @@ def _layer2_clip(img: Image.Image):
         sims = (feat @ _S["text_feat"].T).squeeze(0).cpu().float().numpy()
 
     n           = _S["n_pos"]
-    exp         = np.exp(sims - sims.max())
-    mri_frac    = float(exp[:n].sum() / exp.sum())
+    logit_scale = float(_S["clip"].logit_scale.exp().item())   # CLIP's own temperature (~100)
+    mean_pos    = float(sims[:n].mean())
+    mean_neg    = float(sims[n:].mean())
+
+    pair        = np.array([mean_pos, mean_neg]) * logit_scale
+    pair        = np.exp(pair - pair.max())
+    mri_frac    = float(pair[0] / pair.sum())
     top_neg     = CLIP_NEGATIVE[int(sims[n:].argmax())]
     top_pos     = CLIP_POSITIVE[int(sims[:n].argmax())]
     details     = {
         "mri_softmax_fraction"  : round(mri_frac, 4),
-        "mri_similarity_mean"   : round(float(sims[:n].mean()), 4),
-        "other_similarity_mean" : round(float(sims[n:].mean()), 4),
+        "mri_similarity_mean"   : round(mean_pos, 4),
+        "other_similarity_mean" : round(mean_neg, 4),
         "top_positive_match"    : top_pos,
         "top_negative_match"    : top_neg,
     }
@@ -434,57 +501,32 @@ def _layer3_confidence(conf: float):
 #  Inference
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _b64_png(arr_hw3: np.ndarray, cmap: str | None = None) -> str:
-    """Encode a numpy array (H,W,3) or (H,W) as a base64 PNG string."""
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
-    ax.axis("off")
-    ax.imshow(np.clip(arr_hw3, 0, 1) if cmap is None else arr_hw3, cmap=cmap)
-    plt.tight_layout(pad=0)
+def _to_png_b64(rgb_uint8: np.ndarray) -> str:
+    """Encode an (H,W,3) uint8 array as base64 PNG — no matplotlib Figure/Axes."""
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-    plt.close(fig)
+    Image.fromarray(rgb_uint8, mode="RGB").save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode()
 
 
-def _overlay_b64(base: np.ndarray, mask: np.ndarray, cmap: str, alpha: float) -> str:
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
-    ax.axis("off")
-    ax.imshow(np.clip(base, 0, 1))
-    ax.imshow(mask, cmap=cmap, alpha=alpha)
-    plt.tight_layout(pad=0)
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-    plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode()
+def _b64_png(rgb_hw3: np.ndarray) -> str:
+    """Encode a plain (H,W,3) float [0,1] image."""
+    return _to_png_b64((np.clip(rgb_hw3, 0, 1) * 255).astype(np.uint8))
+
+
+def _overlay_b64(base_hw3: np.ndarray, mask_hw: np.ndarray, cmap_name: str, alpha: float) -> str:
+    """Alpha-blend a colormapped heatmap over the base image, pure numpy/PIL."""
+    cmap = colormaps[cmap_name]
+    heat = cmap(np.clip(mask_hw, 0, 1))[:, :, :3]                       # (H,W,3) float 0-1
+    blended = np.clip(base_hw3 * (1 - alpha) + heat * alpha, 0, 1)
+    return _to_png_b64((blended * 255).astype(np.uint8))
 
 
 def _run_inference(img: Image.Image) -> dict:
     img_t = _transform(img.convert("RGB")).unsqueeze(0)     # (1, 3, 224, 224)
 
-    # Grad-CAM (needs backward pass)
-    cam, pred_idx = _S["grad_cam"](img_t)
-
-    # Clean forward pass for probabilities
-    with torch.no_grad():
-        logits = _S["model"](img_t.to(DEVICE))
-        probs  = F.softmax(logits, dim=1).squeeze().cpu().numpy()
-
-    # ViT attention — CLS-to-patch cosine similarity as attention proxy
-    with torch.no_grad():
-        vit    = _S["model"].vit.backbone
-        x      = img_t.to(DEVICE)
-        tokens = vit.patch_embed(x)
-        tokens = torch.cat([vit.cls_token.expand(1, -1, -1), tokens], dim=1)
-        tokens = tokens + vit.pos_embed
-        for block in vit.blocks:
-            tokens = block(tokens)
-        sim    = F.cosine_similarity(tokens[:, 0:1], tokens[:, 1:], dim=-1)
-        sim    = (sim - sim.min()) / (sim.max() - sim.min() + 1e-8)
-        n_p    = int(sim.shape[-1] ** 0.5)
-        vit_map = F.interpolate(
-            sim.reshape(1, 1, n_p, n_p).float(),
-            size=(IMG_SIZE, IMG_SIZE), mode="bilinear", align_corners=False
-        ).squeeze().cpu().numpy()
+    # Single forward + single backward — produces Grad-CAM, ViT attention,
+    # and class probabilities all from one pass through the model.
+    cam, vit_map, probs, pred_idx = _S["grad_cam"](img_t)
 
     # Denormalise image for visualisation
     img_np = img_t.squeeze().permute(1, 2, 0).detach().numpy()
@@ -610,12 +652,12 @@ async def validate_only(file: UploadFile = File(...)):
     img     = _open_image(await file.read())
     errors, warnings, details = [], [], {}
 
-    ok, msg, det = _layer1_grayscale(img)
+    ok, msg, det = await asyncio.to_thread(_layer1_grayscale, img)
     details["layer1"] = det
     if not ok:
         return ValidateResponse(valid=False, errors=[msg], warnings=[], details=details)
 
-    ok, msg, det = _layer2_clip(img)
+    ok, msg, det = await asyncio.to_thread(_layer2_clip, img)
     details["layer2"] = det
     if not ok:
         return ValidateResponse(valid=False, errors=[msg], warnings=[], details=details)
@@ -631,22 +673,22 @@ async def predict(file: UploadFile = File(...)):
     errors, warnings, vdet = [], [], {}
 
     # Layer 1
-    ok, msg, det = _layer1_grayscale(img)
+    ok, msg, det = await asyncio.to_thread(_layer1_grayscale, img)
     vdet["layer1"] = det
     if not ok:
         return PredictResponse(status="rejected", validation=ValidationDetail(**vdet),
                                warnings=[], errors=[msg], suggestedNextSteps=None)
 
     # Layer 2
-    ok, msg, det = _layer2_clip(img)
+    ok, msg, det = await asyncio.to_thread(_layer2_clip, img)
     vdet["layer2"] = det
     if not ok:
         return PredictResponse(status="rejected", validation=ValidationDetail(**vdet),
                                warnings=[], errors=[msg], suggestedNextSteps=None)
 
-    # Inference
+    # Inference — single forward+backward pass (see GradCAM class docstring)
     t0  = time.perf_counter()
-    res = _run_inference(img)
+    res = await asyncio.to_thread(_run_inference, img)
     ms  = round((time.perf_counter() - t0) * 1000, 1)
 
     # Layer 3
