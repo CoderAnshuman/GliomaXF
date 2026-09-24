@@ -416,7 +416,7 @@ git push origin main
 
 ### 4 — First deploy
 
-Render will:
+HuggingFace will:
 1. Install CPU PyTorch + dependencies (~3 min)
 2. Start the server
 3. On first request, download the model weights (logged to console)
