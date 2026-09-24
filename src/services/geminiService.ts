@@ -7,7 +7,7 @@ export async function analyzeMRI(base64Image: string, mimeType: string) {
       bytes[i] = binaryString.charCodeAt(i);
     }
     const file = new File([bytes], 'mri-scan.jpg', { type: mimeType });
-    
+
     // Use custom CNN-Transformer model for analysis
     return await analyzeWithCustomModel(file);
   } catch (error) {
@@ -59,14 +59,14 @@ export async function analyzeWithCustomModel(file: File) {
 
   try {
     console.log('📤 Sending file to backend:', file.name, file.type, file.size);
-    
+
     const response = await await fetch(`${API_URL}/predict`, {
       method: 'POST',
       body: formData,
     });
 
     console.log('📥 Response status:', response.status, response.statusText);
-    
+
     const data = await response.json();
     console.log('📥 Response data:', data);
 
@@ -84,15 +84,19 @@ export async function analyzeWithCustomModel(file: File) {
     // Success - model returned a prediction
     if (data.status === 'ok' || data.status === 'warn') {
       console.log('✅ Success response received');
-      
-      // Transform backend response to frontend expected format
+
+      const report = data.report; // { region_description, explanation_agreement, summary, summary_error }
+
       return {
         diagnosis: data.pred_class,
         confidence: data.confidence,
-        clinicalSummary: `AI analysis indicates ${data.pred_class} with ${(data.confidence * 100).toFixed(1)}% confidence. ${data.warnings?.length ? 'Warning: ' + data.warnings[0] : ''}`,
+        clinicalSummary: report?.summary
+          ?? `AI analysis indicates ${data.pred_class} with ${(data.confidence * 100).toFixed(1)}% confidence. ${data.warnings?.length ? 'Warning: ' + data.warnings[0] : ''}`,
+        summaryUnavailable: !report?.summary && !!report?.summary_error,
         warnings: data.warnings || [],
         allProbabilities: data.probabilities,
-        tumorLocation: "Brain", // Default location
+        tumorLocation: report?.region_description ?? "Brain",
+        explanationAgreement: report?.explanation_agreement ?? null,
         suggestedNextSteps: data.suggestedNextSteps,
         images: data.images,
         inferenceMs: data.inference_ms
