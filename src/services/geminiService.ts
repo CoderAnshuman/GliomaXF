@@ -83,9 +83,8 @@ export async function analyzeWithCustomModel(file: File) {
 
     // Success - model returned a prediction
     if (data.status === 'ok' || data.status === 'warn') {
-      console.log('✅ Success response received');
-
-      const report = data.report; // { region_description, explanation_agreement, summary, summary_error }
+      const report = data.report;
+      const explainabilityApplicable = data.explainability_applicable ?? true;
 
       return {
         diagnosis: data.pred_class,
@@ -95,10 +94,11 @@ export async function analyzeWithCustomModel(file: File) {
         summaryUnavailable: !report?.summary && !!report?.summary_error,
         warnings: data.warnings || [],
         allProbabilities: data.probabilities,
-        tumorLocation: report?.region_description ?? "Brain",
-        explanationAgreement: report?.explanation_agreement ?? null,
+        tumorLocation: explainabilityApplicable ? (report?.region_description ?? "Brain") : null,
+        explanationAgreement: explainabilityApplicable ? (report?.explanation_agreement ?? null) : null,
+        explainabilityApplicable,
         suggestedNextSteps: data.suggestedNextSteps,
-        images: data.images,
+        images: data.images, // gradcam/vit_attention will be null for notumor predictions
         inferenceMs: data.inference_ms
       };
     }
